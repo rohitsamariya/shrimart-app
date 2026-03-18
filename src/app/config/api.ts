@@ -1,1 +1,1 @@
-export const API_BASE = "https://shrimart-backend.onrender.com/api";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || "https://shrimart-backend.onrender.com/api";
