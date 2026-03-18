@@ -12,7 +12,9 @@ import {
   CreditCard,
   Edit2,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Check,
+  X
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useRef, useState, ChangeEvent } from "react";
@@ -22,6 +24,57 @@ export function ProfilePage() {
   const { user, logout, updateProfile } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [updating, setUpdating] = useState(false);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  
+  const [showOtp, setShowOtp] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+  const [otpError, setOtpError] = useState("");
+
+  const handleEditClick = () => {
+    setEditName(user?.name || "");
+    setEditPhone(user?.phone_number || "");
+    setIsEditing(true);
+  };
+
+  const handleSaveClick = async () => {
+    if (editPhone !== user?.phone_number) {
+      // Show OTP modal if phone number changed
+      setOtpInput("");
+      setOtpError("");
+      setShowOtp(true);
+    } else {
+      // Just update name directly
+      try {
+        setUpdating(true);
+        await updateProfile({ name: editName });
+        setIsEditing(false);
+      } catch (err) {
+        alert("Failed to update profile");
+      } finally {
+        setUpdating(false);
+      }
+    }
+  };
+
+  const handleOtpVerify = async () => {
+    if (otpInput === "123456") {
+      try {
+        setUpdating(true);
+        await updateProfile({ name: editName, phone_number: editPhone });
+        setShowOtp(false);
+        setIsEditing(false);
+      } catch (err) {
+        alert("Failed to update profile");
+      } finally {
+        setUpdating(false);
+      }
+    } else {
+      setOtpError("Invalid OTP. Try 123456");
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -114,12 +167,59 @@ export function ProfilePage() {
           </div>
         </div>
 
-        <h2 className="mt-4 text-[26px] font-bold text-shrimart-black uppercase font-poppins">
-          {user?.name || "New User"}
-        </h2>
-        <p className="text-gray-400 font-normal text-[12px] mt-1 uppercase tracking-widest font-inter">
-          {user?.phone_number}
-        </p>
+        <div className="mt-4 flex flex-col items-center w-full max-w-xs">
+          {isEditing ? (
+            <div className="w-full space-y-3 bg-slate-50 p-4 rounded-3xl border border-gray-100 shadow-sm">
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Full Name</label>
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-[14px] font-semibold text-shrimart-black focus:outline-none focus:border-shrimart-yellow transition-all text-center uppercase font-poppins mt-1"
+                  placeholder="Your Name"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2">Mobile Number</label>
+                <input
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-2xl px-4 py-2 text-[13px] font-medium text-gray-600 focus:outline-none focus:border-shrimart-yellow transition-all text-center tracking-widest mt-1"
+                  placeholder="10-digit number"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="flex-1 py-2.5 bg-red-50 text-red-600 rounded-2xl text-[12px] font-bold uppercase tracking-wide flex items-center justify-center gap-1 hover:bg-red-100 transition-colors"
+                >
+                  <X size={14} /> Cancel
+                </button>
+                <button
+                  onClick={handleSaveClick}
+                  disabled={updating}
+                  className="flex-1 py-2.5 bg-shrimart-black text-white rounded-2xl text-[12px] font-bold uppercase tracking-wide flex items-center justify-center gap-1 shadow-md hover:bg-gray-800 transition-colors disabled:opacity-50"
+                >
+                  {updating ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-center gap-2">
+                <h2 className="text-[26px] font-bold text-shrimart-black uppercase font-poppins text-center">
+                  {user?.name || "New User"}
+                </h2>
+                <button onClick={handleEditClick} className="w-7 h-7 bg-slate-100 rounded-full flex items-center justify-center hover:bg-amber-100 transition-colors hover:text-amber-700 text-gray-400">
+                  <Edit2 size={12} />
+                </button>
+              </div>
+              <p className="text-gray-400 font-normal text-[12px] mt-1 uppercase tracking-widest font-inter text-center bg-slate-50 px-3 py-1 rounded-full border border-gray-100 inline-block">
+                {user?.phone_number}
+              </p>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Menu Sections */}
@@ -163,6 +263,55 @@ export function ProfilePage() {
           </button>
         </div>
       </div>
+      {/* OTP Modal */}
+      {showOtp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-shrimart-black/40 backdrop-blur-sm" onClick={() => setShowOtp(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl flex flex-col items-center border border-white/20"
+          >
+            <div className="w-16 h-16 bg-shrimart-yellow/20 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-sm">
+              <Shield size={28} className="text-shrimart-black" />
+            </div>
+            <h3 className="text-[20px] font-bold text-shrimart-black uppercase font-poppins tracking-tight mb-2">Verify New Number</h3>
+            <p className="text-[13px] text-gray-500 font-medium text-center leading-relaxed px-2 mb-6">
+              Please enter the 6-digit OTP sent to <span className="font-bold text-shrimart-black">{editPhone}</span> to confirm this change.
+            </p>
+            
+            <div className="w-full space-y-4">
+              <input
+                type="text"
+                maxLength={6}
+                value={otpInput}
+                onChange={(e) => { setOtpInput(e.target.value.replace(/\D/g, '')); setOtpError(""); }}
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 py-3 text-[18px] font-bold text-center tracking-[0.5em] text-shrimart-black focus:border-shrimart-yellow focus:bg-white transition-all outline-none"
+                placeholder="000000"
+              />
+              {otpError && <p className="text-red-500 text-[11px] font-bold text-center uppercase tracking-widest">{otpError}</p>}
+              <p className="text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold">Dummy OTP: 123456</p>
+              
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowOtp(false)}
+                  className="flex-1 py-3.5 bg-slate-100 text-gray-500 rounded-2xl font-bold text-[13px] uppercase tracking-wide hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleOtpVerify}
+                  disabled={updating || otpInput.length < 6}
+                  className="flex-[2] py-3.5 bg-shrimart-black text-white rounded-2xl font-bold text-[13px] uppercase tracking-wide hover:bg-gray-800 transition-colors shadow-lg shadow-black/10 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {updating ? <Loader2 size={16} className="animate-spin" /> : "Verify OTP"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
+
