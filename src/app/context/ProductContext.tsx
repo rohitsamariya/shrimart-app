@@ -2,14 +2,18 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { API_BASE } from "./AuthContext";
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   price: number;
-  category: string;
-  unit: string;
-  desc: string;
-  emoji: string;
-  image?: string;
+  category_id?: string;
+  category?: string;   // legacy helper
+  unit?: string;       // legacy helper
+  desc?: string;       // legacy helper
+  emoji?: string;      // legacy helper
+  image_url?: string;
+  image?: string;      // legacy alias
+  description?: string;
+  stock?: number;
   rating?: number;
 }
 

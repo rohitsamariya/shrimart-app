@@ -1,66 +1,98 @@
-import { createContext, useContext, useReducer, ReactNode, useMemo } from "react";
-import { useProducts } from "./ProductContext";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { API_BASE } from "../config/api";
+import { useAuth } from "./AuthContext";
 
-export interface CartItem { id: number; qty: number; }
+export interface CartProduct {
+  id: string;
+  name: string;
+  price: number;
+  image_url?: string;
+  stock: number;
+  description?: string;
+}
 
-interface CartState { items: CartItem[]; }
-
-type CartAction =
-  | { type: "ADD"; id: number }
-  | { type: "REMOVE"; id: number }
-  | { type: "CLEAR" };
-
-function cartReducer(state: CartState, action: CartAction): CartState {
-  switch (action.type) {
-    case "ADD": {
-      const ex = state.items.find((i) => i.id === action.id);
-      if (ex) return { items: state.items.map((i) => i.id === action.id ? { ...i, qty: i.qty + 1 } : i) };
-      return { items: [...state.items, { id: action.id, qty: 1 }] };
-    }
-    case "REMOVE": {
-      const ex = state.items.find((i) => i.id === action.id);
-      if (ex && ex.qty > 1) return { items: state.items.map((i) => i.id === action.id ? { ...i, qty: i.qty - 1 } : i) };
-      return { items: state.items.filter((i) => i.id !== action.id) };
-    }
-    case "CLEAR": return { items: [] };
-    default: return state;
-  }
+export interface CartItem {
+  id: string;
+  quantity: number;
+  products: CartProduct;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (id: number) => void;
-  removeFromCart: (id: number) => void;
-  clearCart: () => void;
-  getQty: (id: number) => number;
+  loading: boolean;
   cartCount: number;
   cartTotal: number;
+  addToCart: (product_id: string, quantity?: number) => Promise<void>;
+  removeFromCart: (product_id: string) => Promise<void>;
+  clearCart: () => Promise<void>;
+  getQty: (product_id: string) => number;
+  refreshCart: () => Promise<void>;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, { items: [] });
-  const { products } = useProducts();
+  const { token, isLoggedIn } = useAuth();
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const cartTotal = useMemo(() => {
-    return state.items.reduce((sum, item) => {
-      const p = products.find((px) => px.id === item.id);
-      return sum + (p ? Number(p.price) * item.qty : 0);
-    }, 0);
-  }, [state.items, products]);
+  const authHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
 
-  const cartCount = state.items.reduce((s, i) => s + i.qty, 0);
+  const fetchCart = useCallback(async () => {
+    if (!isLoggedIn || !token) { setItems([]); return; }
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/cart`, { headers: authHeaders });
+      const data = await res.json();
+      if (data.status === "success") setItems(data.data || []);
+    } catch (e) {
+      console.error("Failed to fetch cart:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [isLoggedIn, token]);
+
+  useEffect(() => {
+    fetchCart();
+  }, [fetchCart]);
+
+  const addToCart = async (product_id: string, quantity = 1) => {
+    await fetch(`${API_BASE}/cart/add`, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ product_id, quantity }),
+    });
+    await fetchCart();
+  };
+
+  const removeFromCart = async (product_id: string) => {
+    await fetch(`${API_BASE}/cart/remove`, {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({ product_id }),
+    });
+    await fetchCart();
+  };
+
+  const clearCart = async () => {
+    await fetch(`${API_BASE}/cart/clear`, { method: "DELETE", headers: authHeaders });
+    setItems([]);
+  };
+
+  const getQty = (product_id: string) =>
+    items.find((i) => i.products?.id === product_id)?.quantity || 0;
+
+  const cartCount = items.reduce((s, i) => s + i.quantity, 0);
+  const cartTotal = items.reduce((s, i) => s + Number(i.products?.price || 0) * i.quantity, 0);
 
   return (
     <CartContext.Provider value={{
-      items: state.items,
-      addToCart: (id) => dispatch({ type: "ADD", id }),
-      removeFromCart: (id) => dispatch({ type: "REMOVE", id }),
-      clearCart: () => dispatch({ type: "CLEAR" }),
-      getQty: (id) => state.items.find((i) => i.id === id)?.qty || 0,
-      cartCount,
-      cartTotal,
+      items, loading, cartCount, cartTotal,
+      addToCart, removeFromCart, clearCart,
+      getQty, refreshCart: fetchCart,
     }}>
       {children}
     </CartContext.Provider>
