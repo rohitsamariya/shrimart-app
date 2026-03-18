@@ -12,8 +12,7 @@ export function RoleGuard({ role }: RoleGuardProps) {
   const targetRole = role === "user" ? "user" : role;
 
   if (!isLoggedIn) {
-     const redirectPath = role === "admin" ? "/login/admin" : role === "rider" ? "/login/rider" : "/login/customer";
-     return <Navigate to={redirectPath} replace />;
+     return <Navigate to="/" replace />;
   }
 
   if (user?.role !== targetRole) {

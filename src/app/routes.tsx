@@ -86,6 +86,7 @@ export const router = createBrowserRouter([
           { index: true, Component: AdminDashboard },
         ]
       },
+      { path: "*", element: <Navigate to="/" replace /> },
     ],
   },
 ]);
