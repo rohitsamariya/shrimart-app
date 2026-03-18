@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { 
-  User, 
+  User as UserIcon, 
   MapPin, 
   Bell, 
   Shield, 
@@ -11,32 +11,65 @@ import {
   HelpCircle,
   CreditCard,
   Edit2,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useRef, useState, ChangeEvent } from "react";
 
 export function ProfilePage() {
   const navigate = useNavigate();
   const { user, logout, updateProfile } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [updating, setUpdating] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate("/login/customer");
   };
 
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Image is too large. Please select an image smaller than 2MB.");
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result as string;
+        await updateProfile({ profile_image: base64String });
+        setUpdating(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Failed to update profile image:", err);
+      setUpdating(false);
+      alert("Failed to update profile image. Please try again.");
+    }
+  };
+
   const menuSections = [
     {
       title: "ACCOUNT ACTIVITY",
       items: [
-        { icon: <ShoppingBag size={18} />, label: "My Orders", sub: "Ongoing and past deliveries", color: "bg-amber-100 text-amber-600" },
-        { icon: <MapPin size={18} />, label: "Saved Addresses", sub: "Home, Work, Other", color: "bg-amber-100 text-amber-600" },
-        { icon: <CreditCard size={18} />, label: "Payment Methods", sub: "Cards, UPI, and Wallets", color: "bg-amber-100 text-amber-600" },
+        { icon: <ShoppingBag size={18} />, label: "My Orders", sub: "Ongoing and past deliveries", color: "bg-amber-100 text-amber-600", path: "/customer/history" },
+        { icon: <MapPin size={18} />, label: "Saved Addresses", sub: "Home, Work, Other", color: "bg-amber-100 text-amber-600", path: "/customer/address" },
+        { icon: <CreditCard size={18} />, label: "Payment Methods", sub: "Cards, UPI, and Wallets", color: "bg-amber-100 text-amber-600", path: "/customer/payment" },
       ]
     },
     {
       title: "PREFERENCES",
       items: [
-        { icon: <HelpCircle size={18} />, label: "Help & Support", sub: "FAQs, Customer Care", color: "bg-amber-100 text-amber-600" },
+        { icon: <HelpCircle size={18} />, label: "Help & Support", sub: "FAQs, Customer Care", color: "bg-amber-100 text-amber-600", path: "/customer/help" },
       ]
     }
   ];
@@ -57,15 +90,28 @@ export function ProfilePage() {
 
       <div className="flex flex-col items-center pt-4 pb-8 px-6">
         {/* Profile Image Section */}
-        <div className="relative">
-          <div className="w-32 h-32 rounded-full border-4 border-shrimart-yellow p-1 shadow-lg">
+        <div className="relative group cursor-pointer" onClick={handleImageClick}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            className="hidden"
+          />
+          <div className="w-32 h-32 rounded-full border-4 border-shrimart-yellow p-1 shadow-lg overflow-hidden group-hover:opacity-80 transition-all">
             <div className="w-full h-full rounded-full bg-amber-100 flex items-center justify-center overflow-hidden border-2 border-white">
-              <span className="text-5xl">👤</span>
+              {updating ? (
+                <Loader2 size={32} className="animate-spin text-shrimart-yellow" />
+              ) : user?.profile_image ? (
+                <img src={user.profile_image} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-5xl">👤</span>
+              )}
             </div>
           </div>
-          <button className="absolute bottom-1 right-1 w-8 h-8 bg-shrimart-yellow rounded-full border-2 border-white flex items-center justify-center shadow-md">
+          <div className="absolute bottom-1 right-1 w-8 h-8 bg-shrimart-yellow rounded-full border-2 border-white flex items-center justify-center shadow-md">
             <Edit2 size={14} className="text-shrimart-black" />
-          </button>
+          </div>
         </div>
 
         <h2 className="mt-4 text-[26px] font-bold text-shrimart-black uppercase font-poppins">
@@ -85,6 +131,7 @@ export function ProfilePage() {
               {section.items.map((item, idx) => (
                 <button
                   key={item.label}
+                  onClick={() => item.path && navigate(item.path)}
                   className={`w-full flex items-center gap-4 px-6 py-4 transition-all hover:bg-white active:scale-[0.99] ${
                     idx !== section.items.length - 1 ? "border-b border-white" : ""
                   }`}

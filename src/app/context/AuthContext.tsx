@@ -6,6 +6,7 @@ interface User {
   role: "admin" | "user" | "vendor" | "rider" | null;
   name?: string;
   email?: string;
+  profile_image?: string;
 }
 
 interface AuthState {
@@ -91,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (updateData: Partial<User>) => {
     try {
-      const res = await fetch(`${API_BASE}/user/update-profile`, {
+      const res = await fetch(`${API_BASE}/auth/update-profile`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -102,6 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (data.status === "success") {
         setState(s => ({ ...s, user: data.user }));
+        // Also update localStorage
+        const saved = JSON.parse(localStorage.getItem("shrimart_auth") || "{}");
+        localStorage.setItem("shrimart_auth", JSON.stringify({ ...saved, user: data.user }));
       } else {
         throw new Error(data.message);
       }

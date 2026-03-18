@@ -16,6 +16,8 @@ import { TrackingPage } from "./components/customer/TrackingPage";
 import { HistoryPage } from "./components/customer/HistoryPage";
 import { ProfilePage } from "./components/customer/ProfilePage";
 import { SearchPage } from "./components/customer/SearchPage";
+import { PaymentPage } from "./components/customer/PaymentPage";
+import { HelpPage } from "./components/customer/HelpPage";
 import { RiderLayout } from "./components/rider/RiderLayout";
 import { RiderDashboard } from "./components/rider/RiderDashboard";
 import { RiderProfilePage } from "./components/rider/RiderProfilePage";
@@ -52,6 +54,8 @@ export const router = createBrowserRouter([
               { path: "history", Component: HistoryPage },
               { path: "profile", Component: ProfilePage },
               { path: "search", Component: SearchPage },
+              { path: "payment", Component: PaymentPage },
+              { path: "help", Component: HelpPage },
             ],
           }
         ],
