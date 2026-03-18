@@ -20,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import riderImage from "@/assets/banner.png";
+import { useAuth } from "../../context/AuthContext";
 
 const floatingItems = ["🥕", "🍅", "🥦", "🍎", "🥛", "🧅", "🌽", "🍋", "🥬", "🍇"];
 
@@ -53,6 +54,16 @@ const testimonials = [
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const { isLoggedIn, user } = useAuth();
+
+  useEffect(() => {
+    if (isLoggedIn && user) {
+      if (user.role === "admin") navigate("/admin");
+      else if (user.role === "rider") navigate("/rider");
+      else navigate("/customer");
+    }
+  }, [isLoggedIn, user, navigate]);
+
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll();
